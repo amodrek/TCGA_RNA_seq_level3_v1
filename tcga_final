@@ -5,10 +5,8 @@
 #modified from TCGA RNA_seqV2 and github user Colby Chiang
 #using on NYU's HPC 
 
-
 #run script in directory that contains the fastq files
 #use: qsub -pe threaded 8 ######  <sample 1 5..> <rep a b>                 
-
 
 module load samtools/1.2.1
 
@@ -71,7 +69,8 @@ python $mapspliceDir/mapsplice_multi_thread.py --fusion \
 echo initial bam file is created now.. deleting the processed FASTQ file
 rm -rf $tmpFastqFile $tmpFastqFile2
 
-#4.Convert back to phred33                                                                                                                                                                                                                                                                                                   
+#4.Convert back to phred33 and process with samtools
+
 java -Xmx512M -jar $ubu sam-convert --phred64to33 --in $outBamFile1 --out $outBamFile3 > $outDir/working/sam_convert.log
 echo bam file converted back to phred33
 
@@ -105,7 +104,8 @@ java -Xmx512M -jar ~/Software/TCGA_RNA_Seq_Pipeline/ubu-1.2-jar-with-dependencie
 
 echo Filtered indels, large inserts, zero mapping quality from transcriptome bam
 
-#11. RSEM                                                                                                                                                                                                                                                                                                              
+#11. RSEM  
+
 echo starting rsem normalization in $outDir for $sampleID
 
 /ifs/home/asm523/tools/RSEM-1.2.29/rsem-calculate-expression \
@@ -118,7 +118,7 @@ echo starting rsem normalization in $outDir for $sampleID
 
 echo data is RSEM normalized
 
-echo deleting a couple BAM files
+echo deleting a extra BAM files
 
 rm -rf ${sample}${rep}/alignments.bam 
 rm -rf ${sample}${rep}/phred33_alignments.bam
