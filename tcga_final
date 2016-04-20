@@ -1,0 +1,129 @@
+#!/bin/bash                                                                                                                                                                      
+#$ -S /bin/bash                                                                                                                                                                  
+#$ -cwd                                                                                                                                                                          
+
+#modified from TCGA RNA_seqV2 and github user Colby Chiang
+#using on NYU's HPC 
+
+
+#run script in directory that contains the fastq files
+#use: qsub -pe threaded 8 ######  <sample 1 5..> <rep a b>                 
+
+
+module load samtools/1.2.1
+
+sample=$1
+rep=$2
+
+gunzip -c $sample${rep}_*_R2_*.fastq.gz > $sample${rep}_R2.fastq
+gunzip -c $sample${rep}_*_R1_*.fastq.gz > $sample${rep}_R1.fastq
+
+softwareDir=~/Software/TCGA_RNA_Seq_Pipeline
+samTools=/ifs/home/asm523/tools/RSEM-1.2.29/samtools-1.3/samtools
+bwaDir=$softwareDir/MapSplice_multithreads_12_07/bowtie-0.12.7_fusion
+mapspliceDir=$softwareDir/MapSplice_multithreads_12_07/bin
+picardDir=$softwareDir/picard-tools-1.82
+ubu=$softwareDir/ubu-1.2-jar-with-dependencies.jar
+rsemDir=$softwareDir/rsem-1.1.13
+bedToolsDir=$softwareDir/bedtools/bin
+referenceGenomeRef=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/rsem_ref/hg19_M_rCRS_ref
+referenceGenomeFile=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/hg19_M_rCRS.fa
+referenceGenomeIndexFile=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/ebwt/humanchridx_M_rCRS
+referenceChromosomesDir=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/chromosomes
+referenceBedFile=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/unc_hg19.bed
+referenceTranscriptsFile=~/ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/rsem_ref/hg19_M_rCRS_ref.transcripts.fa
+
+workingDir=Level_3_Temp
+
+mkdir -p $workingDir
+
+sampleID=$sample$rep
+outDir=$sample$rep
+mkdir -p $outDir
+mkdir -p $outDir/working
+tmpFastqFile=$outDir/$sample${rep}_R1.fastq
+tmpFastqFile2=$outDir/$sample${rep}_R2.fastq
+outBamFile1=$outDir/alignments.bam
+outBamFile2=$outDir/rg_alignments.bam
+outBamFile3=$outDir/phred33_alignments.bam
+outBamFile4=$outDir/sorted_genome_alignments.bam
+ 
+#1. Format fastq 1 for Mapsplice                                                                                                                                                 
+java -Xmx512M -jar $ubu fastq-format --phred33to64 --strip --suffix /1 --in $sample${rep}_R1.fastq $ --out $tmpFastqFile> $outDir/working/mapsplice_prep.log
+echo preprocessing fastq 1 is done
+
+java -Xmx512M -jar $ubu fastq-format --phred33to64 --strip --suffix /2 --in $sample${rep}_R2.fastq $ --out $tmpFastqFile2> $outDir/working/mapsplice_prep.log
+echo preprocessing fastq 2 is done
+
+rm -rf $sample${rep}_R2.fastq $sample${rep}_R1.fastq
+echo removed unzipped fastq files, pre-mapslice files, post gunzip, from working dir
+
+#2.Mapsplice                                                                                                                                                                      
+python $mapspliceDir/mapsplice_multi_thread.py --fusion \
+    --all-chromosomes-files /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/hg19_M_rCRS.fa \
+    --pairend \
+    -X 8 \
+    -Q fq \
+    -c /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/chromosomes \
+    --Bowtieidx /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/hg19_M_rCRS/ebwt/humanchridx_M_rCRS \
+    -1 $tmpFastqFile -2 $tmpFastqFile2 -o $outDir
+
+echo initial bam file is created now.. deleting the processed FASTQ file
+rm -rf $tmpFastqFile $tmpFastqFile2
+
+#4.Convert back to phred33                                                                                                                                                                                                                                                                                                   
+java -Xmx512M -jar $ubu sam-convert --phred64to33 --in $outBamFile1 --out $outBamFile3 > $outDir/working/sam_convert.log
+echo bam file converted back to phred33
+
+samtools sort ${sample}${rep}/phred33_alignments.bam -T ${sample}${rep}_temp_ -o ${sample}${rep}/sorted_genome_alignments.bam
+
+samtools flagstat ${sample}${rep}/sorted_genome_alignments.bam > ${sample}${rep}/sorted_genome_alignments.bam.flagstat
+
+samtools index ${sample}${rep}/sorted_genome_alignments.bam
+
+#8. Sort By chromosome, then read id                                                                                                                                                         
+
+perl /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/sort_bam_by_reference_and_name.pl \
+    --input ${sample}${rep}/sorted_genome_alignments.bam \
+    --output ${sample}${rep}/sorted_by_chr_read.bam \
+    --temp-dir . \
+    --samtools /local/apps/samtools/1.2.1/bin/samtools
+
+
+echo sorted by chromosome then id
+
+#9. Translate to transcriptome coors                                                                                                                                                                                                                                                                                         
+echo in directory $outDir
+java -Xmx3G -jar $ubu sam-xlate --bed /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/unc_hg19.bed \
+    --in $outDir/sorted_by_chr_read.bam \
+    --out $outDir/transcriptome_alignments.bam --order /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/rsem_ref/hg19_M_rCRS_ref.transcripts.fa --xgtags --reverse > $outDir/working/genome_to_transcriptome.log
+echo translation to transcriptome coors done!
+
+#10. Filter indels, large inserts, zero mapping quality from transcriptome bam $ubu 1.2 version needed for this step to use '--single' parameter                                                                                                                                                                             
+
+java -Xmx512M -jar ~/Software/TCGA_RNA_Seq_Pipeline/ubu-1.2-jar-with-dependencies.jar sam-filter --in $outDir/transcriptome_alignments.bam --out $outDir/transcriptome_alignments_filtered.bam --strip-indels --max-insert 10000 --mapq 1 > $outDir/working/sam_filter.log
+
+echo Filtered indels, large inserts, zero mapping quality from transcriptome bam
+
+#11. RSEM                                                                                                                                                                                                                                                                                                              
+echo starting rsem normalization in $outDir for $sampleID
+
+/ifs/home/asm523/tools/RSEM-1.2.29/rsem-calculate-expression \
+    --paired-end \
+    --bam -p 8 \
+    --estimate-rspd \
+    $outDir/transcriptome_alignments_filtered.bam \
+    /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/rsem_ref/hg19_M_rCRS_ref \
+    ${sample}${rep}/rsem
+
+echo data is RSEM normalized
+
+echo deleting a couple BAM files
+
+rm -rf ${sample}${rep}/alignments.bam 
+rm -rf ${sample}${rep}/phred33_alignments.bam
+rm -rf ${sample}${rep}/sorted_by_chr_read.bam
+rm -rf ${sample}${rep}/sorted_genome_alignments.bam
+rm -rf ${sample}${rep}/transcriptome_alignments.bam
+
+echo done with ${sample}${rep}
