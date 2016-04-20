@@ -17,6 +17,7 @@ mv ${sample}${rep}/rsem.genes.results \
     ${sample}${rep}/orig.genes.results; \
     sed /^uc0/d ${sample}${rep}/orig.genes.results > ${sample}${rep}/rsem.genes.results
 
+#quant norm of 7th column (FPKM counts)
 perl \
     /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/quartile_norm.pl \
     -c 7 -q 75 -t 1000 \
