@@ -12,16 +12,16 @@
 sample=$1
 rep=$2
 
-#removes the uc0* lines from the bottom of the list
-mv ${sample}${rep}/rsem.genes.results \
-    ${sample}${rep}/orig.genes.results; \
-    sed /^uc0/d ${sample}${rep}/orig.genes.results > ${sample}${rep}/rsem.genes.results
+#removes the uc0* lines
+mv ${sample}${rep}/${sample}${rep}.rsem.genes.results \
+    ${sample}${rep}/${sample}${rep}.orig.genes.results; \
+    sed /^uc0/d ${sample}${rep}/${sample}${rep}.orig.genes.results > ${sample}${rep}/${sample}${rep}.rsem.genes.results
 
-#quant norm of 7th column (FPKM counts)
+#quant norm of 2nd column in file
 perl \
     /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/quartile_norm.pl \
-    -c 7 -q 75 -t 1000 \
-    -o ${sample}${rep}/rsem.genes.normalized_results \
-    ${sample}${rep}/rsem.genes.results
+    -c 2 -q 75 -t 1000 \
+    -o ${sample}${rep}/${sample}${rep}.rsem.genes.normalized_results \
+    ${sample}${rep}/${sample}${rep}.rsem.genes.results
 
 
