@@ -1,7 +1,1 @@
-#command to download all level 3 tcga data into the same folder
-#link here is for the LGG dataset, rnaseq
 
-
- wget -r -nd \
-  -A '*rsem.genes.normalized_results' \
-  https://tcga-data.nci.nih.gov/tcgafiles/ftp_auth/distro_ftpusers/anonymous/tumor/lgg/cgcc/unc.edu/illuminahiseq_rnaseqv2/rnaseqv2/
