@@ -108,13 +108,13 @@ echo Filtered indels, large inserts, zero mapping quality from transcriptome bam
 
 echo starting rsem normalization in $outDir for $sampleID
 
-/ifs/home/asm523/tools/RSEM-1.2.29/rsem-calculate-expression \
+/ifs/home/asm523/tools/rsem-1.1.13/rsem-calculate-expression \
     --paired-end \
     --bam -p 8 \
     --estimate-rspd \
     $outDir/transcriptome_alignments_filtered.bam \
     /ifs/home/asm523/webshare.bioinf.unc.edu/public/mRNAseq_TCGA/rsem_ref/hg19_M_rCRS_ref \
-    ${sample}${rep}/rsem
+    ${sample}${rep}/${sample}${rep}.rsem
 
 echo data is RSEM normalized
 
