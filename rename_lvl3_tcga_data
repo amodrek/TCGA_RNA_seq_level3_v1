@@ -1,14 +1,12 @@
-#to rename TCGA IDs
+#to rename TCGA IDs... a lot of random scripts
 
+
+#if you download the level 3 data directly from the DCC the manifest file will contain the tumor IDs
 head file_manifest.txt 
 
 #should look like:
 #Platform Type	Center	Platform	Level	Sample	Barcode	File Name
 #METADATA	UNC	IlluminaHiSeq_RNASeqV2	n/a	selected_samples	N/A	unc.edu_LGG.IlluminaHiSeq_RNASeqV2.1.15.0.idf.txt
-#METADATA	UNC	IlluminaHiSeq_RNASeqV2	n/a	selected_samples	N/A	unc.edu_LGG.IlluminaHiSeq_RNASeqV2.1.15.0.sdrf.txt
-#RNASeqV2	UNC	IlluminaHiSeq_RNASeqV2	3	TCGA-FG-5965-02	TCGA-FG-5965-02A-11R-A29R-07/TCGA-FG-5965-02B-11R-A29R-07	unc.edu.013bac31-4670-460a-9108-7b4ae57a2e21.2054871.junction_quantification.txt
-#RNASeqV2	UNC	IlluminaHiSeq_RNASeqV2	3	TCGA-FG-5965-02	TCGA-FG-5965-02A-11R-A29R-07/TCGA-FG-5965-02B-11R-A29R-07	unc.edu.013bac31-4670-460a-9108-7b4ae57a2e21.2055515.rsem.genes.results
-#RNASeqV2	UNC	IlluminaHiSeq_RNASeqV2	3	TCGA-FG-5965-02	TCGA-FG-5965-02A-11R-A29R-07/TCGA-FG-5965-02B-11R-A29R-07	unc.edu.013bac31-4670-460a-9108-7b4ae57a2e21.2055516.rsem.isoforms.results
 
 cp file_manifest.txt tcga_id_test
 
@@ -20,11 +18,29 @@ cut -c1-12 tcga_matched_norm > TCGA_ids
 cut -f2 tcga_matched_norm > TCGA_list
 paste TCGA_ids TCGA_list | column -s $'\t' -t > TCGA_filenames_id_final
 
-
 #renaming actual TCGA files;
 awk '{print $1" "$2}' /ifs/data/placantonakislab/tcga_lgg/TCGA_filenames_id_final | while read fn id; 
 do mv -v "./${id}" "./test/${fn}"; 
 done
+
+#to trim file names with sed, in order to match barcodes in supplementary files
+for i in *; do mv "$i" "`echo $i | sed 's/unc.edu.//g'`"; done
+for i in *; do mv "$i" "`echo $i | sed 's/.[0-9]\{0,9\}.rsem.genes.normalized_results//g'`"; done
+
+#replace , with a tab
+sed 's/\,/\t/g' SDRF_file_s.csv > ID_barcode
+
+#remove IDs with "NA" barcodes if present
+sed '/\tNA/d' SDRF_file_s.csv > SDRF_file_t
+
+#renaming actual TCGA files;
+awk '{print $1" "$2}' /ifs/data/placantonakislab/NEJM_lgg/ID_barcode | while read fn id; 
+do mv -v "./${fn}" "../tumor_IDs/${id}"; 
+done
+
+
+
+
 
 
 
