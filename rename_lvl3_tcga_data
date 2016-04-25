@@ -2,7 +2,6 @@
 
 head file_manifest.txt 
 
-
 #should look like:
 #Platform Type	Center	Platform	Level	Sample	Barcode	File Name
 #METADATA	UNC	IlluminaHiSeq_RNASeqV2	n/a	selected_samples	N/A	unc.edu_LGG.IlluminaHiSeq_RNASeqV2.1.15.0.idf.txt
@@ -16,17 +15,19 @@ cp file_manifest.txt tcga_id_test
 touch tcga_matched_id
 cut -f6,7 tcga_id_test > tcga_matched_id
 
-awk '/rsem.isoforms.normalized_results/ {print}' tcga_matched_id > tcga_matched_norm
+awk '/rsem.genes.normalized_results/ {print}' tcga_matched_id > tcga_matched_norm
 cut -c1-12 tcga_matched_norm > TCGA_ids
 cut -f2 tcga_matched_norm > TCGA_list
 paste TCGA_ids TCGA_list | column -s $'\t' -t > TCGA_filenames_id_final
 
-#should look like:
-#head TCGA_filenames_id_final
-#TCGA-FG-5965  unc.edu.013bac31-4670-460a-9108-7b4ae57a2e21.2055557.rsem.isoforms.normalized_results
-#TCGA-DU-6410  unc.edu.015b3ae9-dee4-495a-9c4d-78ee51082715.1510243.rsem.isoforms.normalized_results
-#TCGA-TQ-A7RQ  unc.edu.02221ced-8f59-4a00-ae01-6096648b34fc.2331624.rsem.isoforms.normalized_results
-#TCGA-CS-4938  unc.edu.0270b7ae-ef7f-4dd7-b019-3e10afa191ff.1659941.rsem.isoforms.normalized_results
-#TCGA-DU-A7TD  unc.edu.03eb7467-7dd5-4228-86b9-7b3b31ba1496.2332373.rsem.isoforms.normalized_results
-#TCGA-DU-A5TS  unc.edu.03fd710d-d09a-4cf1-b513-5eaaa37d56da.2034506.rsem.isoforms.normalized_results
+
+#renaming actual TCGA files;
+awk '{print $1" "$2}' /ifs/data/placantonakislab/tcga_lgg/TCGA_filenames_id_final | while read fn id; 
+do mv -v "./${id}" "./test/${fn}"; 
+done
+
+
+
+
+
 
