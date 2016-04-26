@@ -44,6 +44,7 @@ awk '{print $1" "$2}' /ifs/data/placantonakislab/NEJM_lgg/ID_barcode | while rea
 do mv -v "./${fn}" "../tumor_IDs/${id}"; 
 done
 
+#replace normalized_counts header with the TCGA_ID (or file name)
 
 
 
