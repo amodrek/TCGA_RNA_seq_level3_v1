@@ -45,7 +45,7 @@ do mv -v "./${fn}" "../tumor_IDs/${id}";
 done
 
 #replace normalized_counts header with the TCGA_ID (or file name)
-
+for i in *; do sed "s/normalized_count/${i}/" $i > temp_$i; done
 
 
 
